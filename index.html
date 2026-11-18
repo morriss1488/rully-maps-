@@ -20,7 +20,20 @@ select,input{flex:1}
 button.go{background:var(--acc);color:#fff;border:0;font-weight:700}
 button.on{background:var(--ok);color:#fff;border:0}
 .nav{display:flex;align-items:center;gap:10px}
-#arr{font-size:34px;color:var(--acc);min-width:56px;text-align:center;line-height:0}#arr svg{display:block}
+#arr{font-size:40px;color:#fff;min-width:64px;text-align:center;line-height:1;flex:none}#arr svg{display:block}
+.hud2{position:absolute;z-index:1000;top:calc(env(safe-area-inset-top,0px) + 8px);right:8px;width:calc(100% - 68px);max-width:440px;display:flex;gap:6px;color:#fff}
+.hud2 .cur{flex:1;min-width:0;display:flex;align-items:center;gap:10px;background:rgba(10,8,22,.92);border:1px solid #5b3fd1;border-radius:18px;padding:8px 10px}
+.hud2 .ct{min-width:0}
+#hd{font-size:34px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+#ntxt{font-size:17px;font-weight:700;margin-top:3px;overflow-wrap:anywhere}
+#nsub{font-size:11px;opacity:.7;margin-top:2px}
+.nxt{display:none;flex:none;width:86px;background:rgba(10,8,22,.92);border-radius:18px;padding:6px 4px;text-align:center}
+.nxt small{display:block;font-size:11px;letter-spacing:.1em;opacity:.8;margin-bottom:3px}
+.nxt svg,.nxt .mk{margin:0 auto;display:flex}
+#nxd{font-size:15px;font-weight:700;margin-top:3px;font-variant-numeric:tabular-nums}
+.fab{position:absolute;z-index:1001;left:8px;top:calc(env(safe-area-inset-top,0px) + 8px);width:46px;height:46px;border-radius:50%;font-size:20px;padding:0;background:rgba(10,8,22,.92);color:#fff;border:1px solid #5b3fd1}
+#menu{display:none;top:calc(env(safe-area-inset-top,0px) + 66px);flex-direction:column;gap:6px;z-index:1002}
+#menu.show{display:flex}
 .nav b{font-size:17px;display:block}.nav small{opacity:.75}
 .hud{display:flex;align-items:flex-end;justify-content:space-between;gap:6px;font-variant-numeric:tabular-nums}
 .big{font-size:44px;font-weight:800;line-height:1}.big small{font-size:14px;font-weight:600;opacity:.7}
@@ -46,11 +59,14 @@ body.ed .leaflet-bottom{bottom:240px!important}
 </head>
 <body>
 <div id="map"></div>
-<div class="card top">
+<button class="fab" id="burger" title="Меню маршрута">☰</button>
+<div class="card" id="menu">
   <div class="row"><select id="dest"></select><button class="go" id="go">Маршрут</button><button id="cog" title="Настройки штурмана">⚙</button></div>
   <div class="row"><input id="q" placeholder="Найти любое место…"><button id="find">🔎</button><button id="pick" title="Цель на карте">📌</button><button id="edit" title="Свой маршрут">✏️</button></div>
-  <div class="nav"><div id="arr">▲</div><div><b id="ntxt">Выберите цель (📌) или нарисуйте свой маршрут (✏️)</b><small id="nsub">Ждём GPS…</small></div></div>
-  <div class="strip" id="strip"></div>
+</div>
+<div class="hud2" id="hud">
+  <div class="cur"><div id="arr">▲</div><div class="ct"><div id="hd">—</div><div id="ntxt">Нажмите ☰ и выберите цель</div><div id="nsub">Ждём GPS…</div></div></div>
+  <div class="nxt" id="nx"><small>NEXT</small><div id="nxi"></div><div id="nxd"></div></div>
 </div>
 <div class="card edit" id="ed">
   <div class="row"><select id="tool"><option value="wp">📍 Точка маршрута</option><option value="не режь">✂️ Не режь (don't cut)</option><option value="узко">↔️ Узко (narrow)</option><option value="трамплин">🛫 Трамплин (jump)</option><option value="перегиб">⛰️ Перегиб (crest)</option><option value="камера">📷 Камера (speed camera)</option><option value="яма">🕳️ Яма (pothole)</option><option value="вода на дороге">💧 Вода на дороге</option><option value="узкий мост">🌉 Узкий мост</option><option value="ремонт дороги">🚧 Ремонт дороги</option><option value="опасно">⚠️ Опасно (danger)</option></select><button id="fm">Старт: точка 1</button></div>
@@ -297,17 +313,18 @@ function icon(n,sz=44){
     g='<path d="M24 52V34A18 18 0 0 1 '+ex+' '+ey+'" fill="none" stroke="#fff" stroke-width="6"/><polygon points="0,-10 -9,5 9,5" fill="#fff" transform="translate('+ex+','+ey+') rotate('+ICN[n.sev]+')"/>'}
   const mir=n.dir==='L'?'translate(56,0) scale(-1,1)':'';
   return '<svg width="'+sz+'" height="'+sz+'" viewBox="0 0 56 56"><rect x="2" y="2" width="52" height="52" rx="9" fill="#000" stroke="'+col+'" stroke-width="3"/><g transform="'+mir+'">'+g+'</g>'+(red?'<text x="6" y="50" font-size="14" font-style="italic" font-weight="700" fill="#fff">!</text>':'<text x="6" y="51" font-size="20" font-style="italic" font-weight="700" fill="#fff">'+n.sev+'</text>')+'</svg>'}
-const STRAIGHT='<svg width="52" height="52" viewBox="0 0 56 56"><rect x="2" y="2" width="52" height="52" rx="9" fill="#000" stroke="#339af0" stroke-width="3"/><path d="M28 50V24" stroke="#fff" stroke-width="6"/><polygon points="28,8 18,26 38,26" fill="#fff"/></svg>';
+const fmtD=d=>d>=1000?(d/1000).toFixed(1)+(EN?' km':' км'):(d>=100?Math.round(d/10)*10:Math.round(d))+(EN?' m':' м');
+const STRAIGHT='<svg width="64" height="64" viewBox="0 0 56 56"><rect x="2" y="2" width="52" height="52" rx="9" fill="#000" stroke="#339af0" stroke-width="3"/><path d="M28 50V24" stroke="#fff" stroke-width="6"/><polygon points="28,8 18,26 38,26" fill="#fff"/></svg>';
 function stripHTML(di,pos){let h='',prev=pos;
   for(let k=di,c=0;k<notes.length&&c<4;k++,c++){const n=notes[k],g=Math.round((n.d-prev)/10)*10;h+=(g>=20?'<span class="chip">'+g+'</span>':'')+icon(n,36);prev=n.d+n.len}
   return h}
 function rally(rem){
   const pos=cum[ri],lead=Math.max(60,150+OFF*15,spd*(8+OFF));
   if(!said0){said0=true;const f=notes[0];if(!f||f.d>=300)say(EN?'Straight '+(f?gapStr(f.d):'to the finish'):'Прямо '+(f?gapStr(f.d):'до финиша'))}
-  const di=notes.findIndex(n=>n.d+n.len>=pos-5);$('strip').style.display='flex';$('strip').innerHTML=di<0?'':stripHTML(di,pos);
-  if(di<0){$('arr').innerHTML=STRAIGHT;$('ntxt').textContent=EN?'Straight to the finish':'Прямо до финиша';$('nsub').textContent='до финиша '+(rem/1000).toFixed(1)+' км'}
+  const di=notes.findIndex(n=>n.d+n.len>=pos-5);
+  if(di<0){$('arr').innerHTML=STRAIGHT;$('hd').textContent=fmtD(rem);$('ntxt').textContent=EN?'Straight to the finish':'Прямо до финиша';$('nsub').textContent='';$('nx').style.display='none'}
   else{const n=notes[di],d=n.d-pos;
-    $('arr').innerHTML=icon(n,52);
+    $('arr').innerHTML=icon(n,64);$('hd').textContent=fmtD(Math.max(0,d));
     $('ntxt').textContent=tx(n);
     $('nsub').textContent='через '+(d>1000?(d/1000).toFixed(1)+' км':Math.max(0,Math.round(d))+' м')+' · до финиша '+(rem/1000).toFixed(1)+' км';
     if(!n.txt&&!n.w&&spd>SAFE_V[n.sev]+6&&d<110&&d>0){n.w=1;sy('Тормоз!','Brake!',true)}}
@@ -328,10 +345,10 @@ function navUpdate(){
   const eta=new Date(Date.now()+route.dur*(rem/route.dist)*1000);$('eta').textContent=eta.toTimeString().slice(0,5);
   if(rem<40){finishSay();route=null;stopSim();return}
   if(mode==='rally'){rally(rem);return}
-  $('strip').style.display='none';
+  $('nx').style.display='none';
   const st=route.steps[si];if(!st)return;
   const d=hv(me,[st.maneuver.location[1],st.maneuver.location[0]]),txt=phrase(st),cap=txt[0].toUpperCase()+txt.slice(1);
-  $('arr').textContent=arrow(st);$('ntxt').textContent=cap;$('nsub').textContent='через '+(d>=1000?(d/1000).toFixed(1)+' км':Math.round(d)+' м')+' · до финиша '+(rem/1000).toFixed(1)+' км';
+  $('arr').textContent=arrow(st);$('hd').textContent=fmtD(d);$('ntxt').textContent=cap;$('nsub').textContent=(EN?'to finish ':'до финиша ')+(rem/1000).toFixed(1)+(EN?' km':' км');
   if(st.maneuver.type==='arrive'){if(d<40){finishSay();route=null;stopSim();return}}
   else if(d<30){si++;return}
   const far=Math.max(700,spd*25),near=Math.max(170,spd*8);
@@ -399,6 +416,10 @@ $('lang').onchange=()=>{EN=$('lang').value==='en';try{localStorage.setItem('rr_l
 $('vtest').onclick=()=>say(EN?"3 right long, 100, 4 left into Square right, 150, Hairpin left don't cut, 50, Pothole, straight 300, Finish":'три право затяжной, 100, четыре лево, 150, шпилька, 50, яма, прямо 300',true);
 $('vlist').onclick=()=>{const v=$('vocab');v.style.display=v.style.display==='none'?'block':'none';
   v.innerHTML=['<b>Поворот:</b> «3 Right», «4 Left» — номер, затем сторона. 6 — почти прямо, 1 — самый крутой','<b>Самые крутые:</b> Square (прямой угол), Hairpin (шпилька)','<b>Long:</b> «3 Right · Long» — долгий поворот, держать дольше','<b>Числа отдельно:</b> «300» — метров прямой до следующей записи; into — записи подряд','<b>Дополнения:</b> tightens, opens, don\'t cut, narrow, uphill / downhill, steep','<b>Препятствия (ваши пометки):</b> Speed camera, Pothole, Water on the road, Crest, Narrow bridge, Roadworks, Danger; также Jump, Rocks','<b>Система:</b> Checkpoint 1, Brake!, Finish, Go!, Off route'].map(x=>'<div style="margin:3px 0">'+x+'</div>').join('')};
+$('burger').onclick=()=>$('menu').classList.toggle('show');
+const closeMenu=()=>$('menu').classList.remove('show');
+['go','find','pick','edit','cog'].forEach(id=>$(id).addEventListener('click',closeMenu));
+map.on('click',closeMenu);
 $('stok').onclick=()=>$('st').classList.remove('show');
 </script>
 </body>
