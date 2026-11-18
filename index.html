@@ -20,7 +20,7 @@ select,input{flex:1}
 button.go{background:var(--acc);color:#fff;border:0;font-weight:700}
 button.on{background:var(--ok);color:#fff;border:0}
 .nav{display:flex;align-items:center;gap:10px}
-#arr{font-size:34px;color:var(--acc);min-width:44px;text-align:center}
+#arr{font-size:34px;color:var(--acc);min-width:56px;text-align:center;line-height:0}#arr svg{display:block}
 .nav b{font-size:17px;display:block}.nav small{opacity:.75}
 .hud{display:flex;align-items:flex-end;justify-content:space-between;gap:6px;font-variant-numeric:tabular-nums}
 .big{font-size:44px;font-weight:800;line-height:1}.big small{font-size:14px;font-weight:600;opacity:.7}
@@ -34,6 +34,12 @@ body.ed .leaflet-bottom{bottom:240px!important}
 .set small{opacity:.7}
 .wp{width:26px;height:26px;border-radius:50%;background:var(--acc);color:#fff;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 0 4px #000}
 .un{font-size:22px;filter:drop-shadow(0 0 3px #000)}
+.strip{display:none;align-items:center;gap:4px;overflow:hidden;margin-top:6px}
+.chip{font-size:12px;opacity:.85;padding:0 2px;font-variant-numeric:tabular-nums}
+.mk{border-radius:8px;background:#000;border:2px solid #e03131;display:inline-flex;align-items:center;justify-content:center;font-size:18px;flex:none}
+.strip svg{flex:none}
+.pin{width:30px;height:30px;border-radius:50% 50% 50% 0;background:#d62828;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 0 4px #000}
+.pin span{transform:rotate(45deg);width:20px;height:20px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-size:12px}
 .car{width:0;height:0;border-left:11px solid transparent;border-right:11px solid transparent;border-bottom:28px solid #e8590c;filter:drop-shadow(0 0 3px #000);transition:transform .3s}
 .dst{font-size:28px;filter:drop-shadow(0 0 3px #000)}
 </style>
@@ -44,9 +50,10 @@ body.ed .leaflet-bottom{bottom:240px!important}
   <div class="row"><select id="dest"></select><button class="go" id="go">Маршрут</button><button id="cog" title="Настройки штурмана">⚙</button></div>
   <div class="row"><input id="q" placeholder="Найти любое место…"><button id="find">🔎</button><button id="pick" title="Цель на карте">📌</button><button id="edit" title="Свой маршрут">✏️</button></div>
   <div class="nav"><div id="arr">▲</div><div><b id="ntxt">Выберите цель (📌) или нарисуйте свой маршрут (✏️)</b><small id="nsub">Ждём GPS…</small></div></div>
+  <div class="strip" id="strip"></div>
 </div>
 <div class="card edit" id="ed">
-  <div class="row"><select id="tool"><option value="wp">📍 Точка маршрута</option><option value="не режь">⚠ Пометка: не режь</option><option value="узко">⚠ Пометка: узко</option><option value="трамплин">⚠ Пометка: трамплин</option><option value="осторожно">⚠ Пометка: осторожно</option></select><button id="fm">Старт: точка 1</button></div>
+  <div class="row"><select id="tool"><option value="wp">📍 Точка маршрута</option><option value="не режь">✂️ Не режь (don't cut)</option><option value="узко">↔️ Узко (narrow)</option><option value="трамплин">🛫 Трамплин (jump)</option><option value="перегиб">⛰️ Перегиб (crest)</option><option value="камера">📷 Камера (speed camera)</option><option value="яма">🕳️ Яма (pothole)</option><option value="вода на дороге">💧 Вода на дороге</option><option value="узкий мост">🌉 Узкий мост</option><option value="ремонт дороги">🚧 Ремонт дороги</option><option value="опасно">⚠️ Опасно (danger)</option></select><button id="fm">Старт: точка 1</button></div>
   <div class="row"><button id="undo">↶</button><button id="wipe">🗑</button><button id="mk" class="go">▶ Построить</button><button id="sv">💾</button><select id="saved"></select><button id="gpx">⬇</button></div>
 </div>
 <div class="card set" id="st"><b>Настройки штурмана</b>
@@ -54,6 +61,10 @@ body.ed .leaflet-bottom{bottom:240px!important}
   <small>«плюс» — подъём, «минус» — спуск; при двойном пороге — «сильный»</small>
   <div class="row" style="margin-top:8px;align-items:center"><span style="flex:1">Вызов пасснот: <b id="offv">0</b> с</span><input id="off" type="range" min="-5" max="8" step="1" style="flex:1.3"></div>
   <small>Больше — штурман читает раньше, меньше — позже</small>
+  <div class="row" style="margin-top:8px;align-items:center"><span style="flex:1">Язык штурмана</span><select id="lang" style="flex:1.2"><option value="ru">Русский</option><option value="en">English (WRC-style)</option></select></div>
+  <small>English: «Left 3 into Right 4 long, 100, Hairpin left don't cut»</small>
+  <div class="row" style="margin-top:8px"><button id="vtest">▶ Проверить голос</button><button id="vlist">📖 Словарь</button></div>
+  <div id="vocab" style="display:none;max-height:36vh;overflow:auto;font-size:12px;margin-top:6px"></div>
   <button class="go" id="stok" style="margin-top:8px;width:100%">Готово</button>
 </div>
 <div class="card bottom">
@@ -100,13 +111,26 @@ const hv=(a,b)=>{const R=6371000,r=Math.PI/180,dl=(b[0]-a[0])*r,dn=(b[1]-a[1])*r
 const brg=(a,b)=>{const r=Math.PI/180,y=Math.sin((b[1]-a[1])*r)*Math.cos(b[0]*r),x=Math.cos(a[0]*r)*Math.sin(b[0]*r)-Math.sin(a[0]*r)*Math.cos(b[0]*r)*Math.cos((b[1]-a[1])*r);return(Math.atan2(y,x)/r+360)%360};
 
 // ===== Голос =====
-let ru=null;const pv=()=>{ru=speechSynthesis.getVoices().find(v=>/^ru/i.test(v.lang))||null};
+let EN=false;try{EN=localStorage.getItem('rr_lang')==='en'}catch(e){}
+const VO={ru:null,en:null};
+const pv=()=>{const v=speechSynthesis.getVoices();VO.ru=v.find(x=>/^ru/i.test(x.lang))||null;
+  VO.en=v.find(x=>/en[-_]GB/i.test(x.lang)&&/daniel|male|arthur|oliver|george/i.test(x.name))||v.find(x=>/en[-_]GB/i.test(x.lang))||v.find(x=>/^en/i.test(x.lang))||null};
 if('speechSynthesis' in window){pv();speechSynthesis.onvoiceschanged=pv}
-function say(t,urgent){if(!voiceOn||!('speechSynthesis' in window))return;try{if(urgent)speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang='ru-RU';if(ru)u.voice=ru;u.rate=1.15;u.pitch=.9;speechSynthesis.speak(u)}catch(e){}}
-$('voice').onclick=()=>{voiceOn=!voiceOn;$('voice').textContent=voiceOn?'🔊':'🔇';if(voiceOn)say('Штурман на связи');else try{speechSynthesis.cancel()}catch(e){}};
-const rnd=m=>m>=1000?(m/1000).toFixed(1).replace('.',',')+' километра':Math.round(m/50)*50+' метров';
+function say(t,urgent){if(!voiceOn||!('speechSynthesis' in window))return;try{if(urgent)speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);
+  u.lang=EN?'en-GB':'ru-RU';const vv=EN?VO.en:VO.ru;if(vv)u.voice=vv;u.rate=EN?1.05:1.15;u.pitch=EN?.8:.9;speechSynthesis.speak(u)}catch(e){}}
+const sy=(r,e,u)=>say(EN?e:r,u);
+$('voice').onclick=()=>{voiceOn=!voiceOn;$('voice').textContent=voiceOn?'🔊':'🔇';if(voiceOn)sy('Штурман на связи','Co-driver ready');else try{speechSynthesis.cancel()}catch(e){}};
+const rnd=m=>EN?(m>=1000?(m/1000).toFixed(1)+' kilometers':Math.round(m/50)*50+' meters'):m>=1000?(m/1000).toFixed(1).replace('.',',')+' километра':Math.round(m/50)*50+' метров';
 const DIR={left:'налево','slight left':'плавно налево','sharp left':'резко налево',right:'направо','slight right':'плавно направо','sharp right':'резко направо',straight:'прямо',uturn:'разворот'};
-function phrase(st){const m=st.maneuver,t=m.type,mod=m.modifier||'',n=st.name?' на '+st.name:'';
+function finishSay(){const k=(trip/1000).toFixed(1);sy('Финиш! Пройдено '+k.replace('.',',')+' километра. Максимум '+Math.round(maxSp)+' километров в час','Finish! Distance '+k+' kilometers. Top speed '+Math.round(maxSp)+' kilometers per hour',true)}
+function phraseEN(st){const m=st.maneuver,t=m.type,mod=m.modifier||'',n=st.name?' onto '+st.name:'';
+  const D={left:'turn left','slight left':'bear left','sharp left':'sharp left',right:'turn right','slight right':'bear right','sharp right':'sharp right',straight:'continue straight',uturn:'make a U-turn'};
+  if(t==='arrive')return 'You have arrived';if(t==='via')return 'Checkpoint';
+  if(/roundabout|rotary/.test(t))return 'At the roundabout take exit '+(m.exit||1)+n;
+  if(t==='fork')return 'Keep '+(mod.includes('left')?'left':'right')+n;
+  if(t==='off ramp')return 'Take the exit '+(mod.includes('left')?'left':'right')+n;
+  return (D[mod]||'Continue')+n}
+function phrase(st){if(EN)return phraseEN(st);const m=st.maneuver,t=m.type,mod=m.modifier||'',n=st.name?' на '+st.name:'';
   if(t==='arrive')return 'Вы прибыли';
   if(t==='via')return 'Контрольная точка';
   if(/roundabout|rotary/.test(t))return 'На кольце, '+(m.exit||1)+'-й съезд'+n;
@@ -167,9 +191,10 @@ async function build(re){
     const km=(rt.distance/1000).toFixed(1);
     if(!re&&!editing){setFollow(false);map.fitBounds(line.getBounds(),{paddingTopLeft:[10,170],paddingBottomRight:[10,170]})}
     if(editing)$('nsub').textContent='Маршрут '+km+' км · пасснот '+notes.length;
-    else say(re?'Маршрут перестроен':(wp.length?'Свой маршрут. ':'Маршрут до '+target.name+'. ')+km.replace('.',',')+' километра. Пасснот '+notes.length+'. '+(me?'Поехали!':'GPS не найден, старт из центра карты'),true);
+    else sy(re?'Маршрут перестроен':(wp.length?'Свой маршрут. ':'Маршрут до '+target.name+'. ')+km.replace('.',',')+' километра. Пасснот '+notes.length+'. '+(me?'Поехали!':'GPS не найден, старт из центра карты'),
+      re?'Route recalculated':(wp.length?'Custom route. ':'Route to '+target.name+'. ')+km+' kilometers. '+notes.length+' pacenotes. '+(me?'Go!':'No GPS, starting from the map center'),true);
     navUpdate();
-  }catch(e){$('nsub').textContent='Не удалось построить маршрут (нужен интернет)';if(!editing)say('Маршрут не построен')}
+  }catch(e){$('nsub').textContent='Не удалось построить маршрут (нужен интернет)';if(!editing)sy('Маршрут не построен','Route not found')}
 }
 $('go').onclick=()=>{if(!dest.value)return;const [la,lo]=dest.value.split(',').map(Number);setTarget([la,lo],dest.selectedOptions[0].dataset.n)};
 $('pick').onclick=()=>{picking=!picking;$('pick').className=picking?'on':'';$('ntxt').textContent=picking?'Коснитесь карты — куда едем?':$('ntxt').textContent};
@@ -188,7 +213,20 @@ const NUM=['','один','два','три','четыре','пять','шесть
 const gapStr=g=>g<200?Math.round(g/10)*10:g<1000?Math.round(g/50)*50:Math.round(g/100)*100;
 let GT=5,OFF=0;
 const gw=n=>{if(n.g==null)return'';const p=Math.abs(n.g)*100;return p>=GT?(p>=2*GT?' сильный':'')+(n.g>0?' плюс':' минус'):''};
-const tx=(n,speak)=>n.txt?n.txt:(speak?NUM[n.sev]:n.sev)+(n.dir==='L'?' лево':' право')+n.mods.map(m=>' '+m).join('')+(n.nocut?' не режь':'')+(n.narrow?' узко':'')+gw(n);
+const TXEN={'не режь':"Don't cut",'узко':'Narrow','трамплин':'Jump','перегиб':'Crest','камера':'Speed camera','яма':'Pothole','вода на дороге':'Water on the road','узкий мост':'Narrow bridge','мост':'Narrow bridge','ремонт дороги':'Roadworks','опасно':'Danger','осторожно':'Danger','камни':'Rocks'};
+const MODEN={'затяжной':'long','закрывается':'tightens','открывается':'opens'};
+// класс поворота как в гайде: 6…1, square (прямой угол), hairpin (шпилька)
+const cls=n=>n.ang>=135?'hair':(n.sev===1&&n.ang>=75)?'sq':n.sev;
+function txEN(n,speak){
+  if(n.txt)return TXEN[n.txt]||(n.txt.startsWith('контрольная')?'Checkpoint '+n.txt.split(' ').pop():n.txt);
+  const D=n.dir==='L'?'Left':'Right',c=cls(n);
+  const w=c==='hair'?'Hairpin '+D:c==='sq'?'Square '+D:n.sev+' '+D;
+  const m=n.mods.map(x=>MODEN[x]||x);if(n.nocut)m.push("don't cut");if(n.narrow)m.push('narrow');
+  if(n.g!=null){const p=Math.abs(n.g)*100;if(p>=GT)m.push((p>=2*GT?'steep ':'')+(n.g>0?'uphill':'downhill'))}
+  if(speak)return [w].concat(m).join(' ');
+  const cap=x=>x[0].toUpperCase()+x.slice(1);
+  return [w].concat(m.map(cap)).join(' · ')}
+const tx=(n,speak)=>EN?txEN(n,speak):n.txt?n.txt:(speak?NUM[n.sev]:n.sev)+(n.dir==='L'?' лево':' право')+n.mods.map(m=>' '+m).join('')+(n.nocut?' не режь':'')+(n.narrow?' узко':'')+gw(n);
 function posAtD(d,c,cm){let lo=0,hi=cm.length-1;while(hi-lo>1){const m=(lo+hi)>>1;cm[m]<=d?lo=m:hi=m}
   const f=Math.min(1,Math.max(0,(d-cm[lo])/Math.max(1e-6,cm[hi]-cm[lo]))),A=c[lo],B=c[hi];return[A[0]+(B[0]-A[0])*f,A[1]+(B[1]-A[1])*f]}
 function buildNotes(){
@@ -203,7 +241,7 @@ function buildNotes(){
     const mods=[];if(len>=130)mods.push('затяжной');
     if(c.arr.length>=6){const hf=c.arr.length>>1,a1=c.arr.slice(0,hf).reduce((x,y)=>x+y,0)/hf,a2=c.arr.slice(hf).reduce((x,y)=>x+y,0)/(c.arr.length-hf);
       if(a2/a1>1.7)mods.push('закрывается');else if(a2/a1<.6)mods.push('открывается')}
-    notes.push({d:c.a*S,len,dir:c.sg>0?'R':'L',sev,mods,nocut:sev<=3&&(mods.includes('закрывается')||ang>=100)})};
+    notes.push({d:c.a*S,len,dir:c.sg>0?'R':'L',sev,mods,ang,nocut:sev<=3&&(mods.includes('закрывается')||ang>=100)})};
   for(let i=1;i<dh.length-1;i++){
     const A=dh[i]+dh[i+1],big=Math.abs(A)>=TH;
     if(cur&&big&&Math.sign(A)!==cur.sg){fin(cur);cur=null}
@@ -241,25 +279,42 @@ async function loadElev(r,cm){
 function pack(i){
   const total=cum[cum.length-1],parts=[tx(notes[i],1)];notes[i].s=true;let j=i;
   while(j<notes.length-1&&j-i<3){const g=notes[j+1].d-(notes[j].d+notes[j].len);if(g>260)break;
-    parts.push(gapStr(g));parts.push(tx(notes[j+1],1));notes[j+1].s=true;j++}
+    parts.push(EN?(g<25?'into':g<50?'and':gapStr(g)):gapStr(g));parts.push(tx(notes[j+1],1));notes[j+1].s=true;j++}
   const nx=notes[j+1],g=(nx?nx.d:total)-(notes[j].d+notes[j].len);
-  if(g>=300)parts.push('прямо '+(nx?gapStr(g):'до финиша'));
-  return parts.join(', ');
+  if(g>=300)parts.push(EN?'straight '+(nx?gapStr(g):'to the finish'):'прямо '+(nx?gapStr(g):'до финиша'));
+  return EN?parts.join(', ').replace(/, (into|and), /g,' $1 '):parts.join(', ');
 }
+const COL={1:'#e03131',2:'#f08c00',3:'#f5c518',4:'#94d82d',5:'#40c057',6:'#2fbf2f'};
+const MKI={'трамплин':'🛫','не режь':'✂️','узко':'↔️','камни':'🪨','камера':'📷','яма':'🕳️','вода на дороге':'💧','перегиб':'⛰️','узкий мост':'🌉','мост':'🌉','ремонт дороги':'🚧','опасно':'⚠️','осторожно':'⚠️'};
+const ICN={6:20,5:35,4:50,3:65,2:80,1:97};
+// знак как в гайде: чёрный квадрат, цветная рамка, стрелка, номер слева внизу; square/hairpin с «!»
+function icon(n,sz=44){
+  if(n.txt){const e=n.txt.startsWith('контрольная')?'📍':(MKI[n.txt]||'⚠️');return '<span class="mk" style="width:'+sz+'px;height:'+sz+'px">'+e+'</span>'}
+  const c=cls(n),red=c==='hair'||c==='sq',col=red?'#e03131':COL[n.sev];let g;
+  if(c==='hair')g='<path d="M16 50V24A12 12 0 0 1 40 24V36" fill="none" stroke="#fff" stroke-width="6"/><polygon points="31,35 49,35 40,50" fill="#fff"/>';
+  else if(c==='sq')g='<path d="M18 52V22H34" fill="none" stroke="#fff" stroke-width="6"/><polygon points="33,12 33,32 49,22" fill="#fff"/>';
+  else{const t=ICN[n.sev]*Math.PI/180,r=18,cx=24+r,cy=34,ex=(cx-r*Math.cos(t)).toFixed(1),ey=(cy-r*Math.sin(t)).toFixed(1);
+    g='<path d="M24 52V34A18 18 0 0 1 '+ex+' '+ey+'" fill="none" stroke="#fff" stroke-width="6"/><polygon points="0,-10 -9,5 9,5" fill="#fff" transform="translate('+ex+','+ey+') rotate('+ICN[n.sev]+')"/>'}
+  const mir=n.dir==='L'?'translate(56,0) scale(-1,1)':'';
+  return '<svg width="'+sz+'" height="'+sz+'" viewBox="0 0 56 56"><rect x="2" y="2" width="52" height="52" rx="9" fill="#000" stroke="'+col+'" stroke-width="3"/><g transform="'+mir+'">'+g+'</g>'+(red?'<text x="6" y="50" font-size="14" font-style="italic" font-weight="700" fill="#fff">!</text>':'<text x="6" y="51" font-size="20" font-style="italic" font-weight="700" fill="#fff">'+n.sev+'</text>')+'</svg>'}
+const STRAIGHT='<svg width="52" height="52" viewBox="0 0 56 56"><rect x="2" y="2" width="52" height="52" rx="9" fill="#000" stroke="#339af0" stroke-width="3"/><path d="M28 50V24" stroke="#fff" stroke-width="6"/><polygon points="28,8 18,26 38,26" fill="#fff"/></svg>';
+function stripHTML(di,pos){let h='',prev=pos;
+  for(let k=di,c=0;k<notes.length&&c<4;k++,c++){const n=notes[k],g=Math.round((n.d-prev)/10)*10;h+=(g>=20?'<span class="chip">'+g+'</span>':'')+icon(n,36);prev=n.d+n.len}
+  return h}
 function rally(rem){
   const pos=cum[ri],lead=Math.max(60,150+OFF*15,spd*(8+OFF));
-  if(!said0){said0=true;const f=notes[0];if(!f||f.d>=300)say('Прямо '+(f?gapStr(f.d):'до финиша'))}
-  const di=notes.findIndex(n=>n.d+n.len>=pos-5);
-  if(di<0){$('arr').textContent='⬆';$('ntxt').textContent='Прямо до финиша';$('nsub').textContent='до финиша '+(rem/1000).toFixed(1)+' км'}
+  if(!said0){said0=true;const f=notes[0];if(!f||f.d>=300)say(EN?'Straight '+(f?gapStr(f.d):'to the finish'):'Прямо '+(f?gapStr(f.d):'до финиша'))}
+  const di=notes.findIndex(n=>n.d+n.len>=pos-5);$('strip').style.display='flex';$('strip').innerHTML=di<0?'':stripHTML(di,pos);
+  if(di<0){$('arr').innerHTML=STRAIGHT;$('ntxt').textContent=EN?'Straight to the finish':'Прямо до финиша';$('nsub').textContent='до финиша '+(rem/1000).toFixed(1)+' км'}
   else{const n=notes[di],d=n.d-pos;
-    $('arr').textContent=n.txt?n.ic:n.dir==='L'?'⬅':'⮕';
-    $('ntxt').textContent=notes.slice(di,di+3).map(x=>tx(x)).join(' · ');
+    $('arr').innerHTML=icon(n,52);
+    $('ntxt').textContent=tx(n);
     $('nsub').textContent='через '+(d>1000?(d/1000).toFixed(1)+' км':Math.max(0,Math.round(d))+' м')+' · до финиша '+(rem/1000).toFixed(1)+' км';
-    if(!n.txt&&!n.w&&spd>SAFE_V[n.sev]+6&&d<110&&d>0){n.w=1;say('Тормоз!',true)}}
+    if(!n.txt&&!n.w&&spd>SAFE_V[n.sev]+6&&d<110&&d>0){n.w=1;sy('Тормоз!','Brake!',true)}}
   const nx=notes.find(n=>!n.s&&n.d+n.len>=pos-5);
   if(nx&&nx.d-pos<lead)say(pack(notes.indexOf(nx)));
 }
-$('mode').onclick=()=>{mode=mode==='rally'?'nav':'rally';$('mode').textContent=mode==='rally'?'🎙 Ралли':'🧭 Нави';say(mode==='rally'?'Диктовка ралли':'Режим навигатора',true)};
+$('mode').onclick=()=>{mode=mode==='rally'?'nav':'rally';$('mode').textContent=mode==='rally'?'🎙 Ралли':'🧭 Нави';sy(mode==='rally'?'Диктовка ралли':'Режим навигатора',mode==='rally'?'Rally mode':'Navigator mode',true)};
 
 // ===== Штурман: ведение по маршруту =====
 function navUpdate(){
@@ -268,27 +323,28 @@ function navUpdate(){
   let best=1e12,bi=ri;for(let i=Math.max(0,ri-5);i<Math.min(route.c.length,ri+400);i++){const d=hv(me,route.c[i]);if(d<best){best=d;bi=i}}
   if(best>150&&ri>0){for(let i=0;i<route.c.length;i+=3){const d=hv(me,route.c[i]);if(d<best){best=d;bi=i}}}
   ri=bi;off=best>110?off+1:0;
-  if(off>=4&&Date.now()-lastReroute>20000&&(target||wp.length)){lastReroute=Date.now();off=0;say('Вы съехали с маршрута',true);build(true);return}
+  if(off>=4&&Date.now()-lastReroute>20000&&(target||wp.length)){lastReroute=Date.now();off=0;sy('Вы съехали с маршрута','Off route',true);build(true);return}
   const rem=route.dist-cum[ri];$('rem').textContent=rem>=1000?(rem/1000).toFixed(1)+' км':Math.round(rem)+' м';
   const eta=new Date(Date.now()+route.dur*(rem/route.dist)*1000);$('eta').textContent=eta.toTimeString().slice(0,5);
-  if(rem<40){say('Финиш! Пройдено '+(trip/1000).toFixed(1).replace('.',',')+' километра. Максимум '+Math.round(maxSp)+' километров в час',true);route=null;stopSim();return}
+  if(rem<40){finishSay();route=null;stopSim();return}
   if(mode==='rally'){rally(rem);return}
+  $('strip').style.display='none';
   const st=route.steps[si];if(!st)return;
   const d=hv(me,[st.maneuver.location[1],st.maneuver.location[0]]),txt=phrase(st),cap=txt[0].toUpperCase()+txt.slice(1);
   $('arr').textContent=arrow(st);$('ntxt').textContent=cap;$('nsub').textContent='через '+(d>=1000?(d/1000).toFixed(1)+' км':Math.round(d)+' м')+' · до финиша '+(rem/1000).toFixed(1)+' км';
-  if(st.maneuver.type==='arrive'){if(d<40){say('Финиш! Пройдено '+(trip/1000).toFixed(1).replace('.',',')+' километра. Максимум '+Math.round(maxSp)+' километров в час',true);route=null;stopSim();return}}
+  if(st.maneuver.type==='arrive'){if(d<40){finishSay();route=null;stopSim();return}}
   else if(d<30){si++;return}
   const far=Math.max(700,spd*25),near=Math.max(170,spd*8);
-  if(st.f<1&&d<far){st.f=1;say('Через '+rnd(d)+' '+txt)}
-  if(st.f<2&&d<near){st.f=2;say(cap+', '+rnd(d)+(spd>17&&/sharp|uturn/.test(st.maneuver.modifier||'')?', тормози!':''),true)}
-  if(st.f<3&&d<90&&spd>14&&/sharp|uturn|roundabout/.test((st.maneuver.modifier||'')+st.maneuver.type)){st.f=3;say('Тормоз!',true)}
+  if(st.f<1&&d<far){st.f=1;say((EN?'In ':'Через ')+rnd(d)+' '+txt)}
+  if(st.f<2&&d<near){st.f=2;say(cap+', '+rnd(d)+(spd>17&&/sharp|uturn/.test(st.maneuver.modifier||'')?(EN?', brake!':', тормози!'):''),true)}
+  if(st.f<3&&d<90&&spd>14&&/sharp|uturn|roundabout/.test((st.maneuver.modifier||'')+st.maneuver.type)){st.f=3;sy('Тормоз!','Brake!',true)}
 }
 
 // ===== Демо: едем по построенному маршруту без GPS =====
 function stopSim(){sim=false;clearInterval(simT);$('sim').className='';$('sim').textContent='▶ Демо'}
 $('sim').onclick=()=>{
   if(sim){stopSim();return}
-  if(!route){say('Сначала постройте маршрут');return}
+  if(!route){sy('Сначала постройте маршрут','Build a route first');return}
   sim=true;$('sim').className='on';$('sim').textContent='⏸ Демо';setFollow(true);map.setZoom(16);
   let dd=0,k=0;simT=setInterval(()=>{dd+=25;if(!route){stopSim();return}
     while(k<cum.length-2&&cum[k+1]<dd)k++;const f=Math.min(1,(dd-cum[k])/Math.max(1,cum[k+1]-cum[k])),A=route.c[k],B=route.c[Math.min(k+1,route.c.length-1)];
@@ -308,7 +364,7 @@ function addWp(p){
   m.on('click',()=>{if(!editing)return;map.removeLayer(m);wp.splice(wp.indexOf(w),1);renum();sched()});
   wp.push(w);renum();sched()}
 function addNote(p,t,silent){
-  const m=L.marker(p,{icon:L.divIcon({className:'',html:'<div class="un">⚠</div>',iconSize:[24,24],iconAnchor:[12,12]}),bubblingMouseEvents:false}).addTo(map).bindTooltip(t,{permanent:true,direction:'right',offset:[10,0]}),u={p,t,m};
+  const m=L.marker(p,{icon:L.divIcon({className:'',html:'<div class="pin"><span>'+(MKI[t]||'⚠️')+'</span></div>',iconSize:[30,30],iconAnchor:[15,30]}),bubblingMouseEvents:false}).addTo(map).bindTooltip(EN?(TXEN[t]||t):t,{permanent:true,direction:'right',offset:[12,-14]}),u={p,t,m};
   m.on('click',()=>{if(!editing)return;map.removeLayer(m);userNotes.splice(userNotes.indexOf(u),1);sched()});
   userNotes.push(u);if(!silent)sched()}
 function clearCustom(){wp.forEach(w=>map.removeLayer(w.m));userNotes.forEach(u=>map.removeLayer(u.m));wp=[];userNotes=[]}
@@ -338,6 +394,11 @@ $('gpx').onclick=()=>{if(!route)return;const x=['<?xml version="1.0" encoding="U
 $('cog').onclick=()=>{$('gt').value=GT;$('off').value=OFF;$('offv').textContent=OFF;$('st').classList.add('show')};
 $('gt').onchange=()=>{GT=Math.max(1,+$('gt').value||5);saveSet()};
 $('off').oninput=()=>{OFF=+$('off').value;$('offv').textContent=OFF;saveSet()};
+$('lang').value=EN?'en':'ru';
+$('lang').onchange=()=>{EN=$('lang').value==='en';try{localStorage.setItem('rr_lang',EN?'en':'ru')}catch(e){}sy('Штурман говорит по-русски','Co-driver in English',true)};
+$('vtest').onclick=()=>say(EN?"3 right long, 100, 4 left into Square right, 150, Hairpin left don't cut, 50, Pothole, straight 300, Finish":'три право затяжной, 100, четыре лево, 150, шпилька, 50, яма, прямо 300',true);
+$('vlist').onclick=()=>{const v=$('vocab');v.style.display=v.style.display==='none'?'block':'none';
+  v.innerHTML=['<b>Поворот:</b> «3 Right», «4 Left» — номер, затем сторона. 6 — почти прямо, 1 — самый крутой','<b>Самые крутые:</b> Square (прямой угол), Hairpin (шпилька)','<b>Long:</b> «3 Right · Long» — долгий поворот, держать дольше','<b>Числа отдельно:</b> «300» — метров прямой до следующей записи; into — записи подряд','<b>Дополнения:</b> tightens, opens, don\'t cut, narrow, uphill / downhill, steep','<b>Препятствия (ваши пометки):</b> Speed camera, Pothole, Water on the road, Crest, Narrow bridge, Roadworks, Danger; также Jump, Rocks','<b>Система:</b> Checkpoint 1, Brake!, Finish, Go!, Off route'].map(x=>'<div style="margin:3px 0">'+x+'</div>').join('')};
 $('stok').onclick=()=>$('st').classList.remove('show');
 </script>
 </body>
