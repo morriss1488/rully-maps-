@@ -11,7 +11,7 @@
 *{box-sizing:border-box}
 html,body{height:100%;margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--text)}
 #map{position:absolute;inset:0;background:#222}
-.card{position:absolute;left:8px;right:8px;z-index:1000;background:var(--panel);border-radius:14px;padding:10px;box-shadow:0 2px 12px #0005;backdrop-filter:blur(6px)}
+.card{position:absolute;left:8px;right:8px;z-index:1000;background:var(--panel);border-radius:14px;padding:10px;box-shadow:0 2px 12px #0005}
 .top{top:calc(env(safe-area-inset-top,0px) + 8px);display:flex;flex-direction:column;gap:6px}
 .bottom{bottom:calc(env(safe-area-inset-bottom,0px) + 8px)}
 .row{display:flex;gap:6px}
@@ -43,7 +43,14 @@ button.on{background:var(--ok);color:#fff;border:0}
 .edit{display:none;flex-direction:column;gap:6px;bottom:calc(env(safe-area-inset-bottom,0px) + 140px)}
 .edit.show{display:flex}
 body.ed .leaflet-bottom{bottom:240px!important}
-.set{display:none;top:28%}.set.show{display:block}
+.set{display:none;top:calc(env(safe-area-inset-top,0px) + 66px);max-height:calc(100% - 150px);overflow:auto;z-index:1003}.set.show{display:block}
+#gs{display:none;position:absolute;z-index:1001;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 150px);font-size:18px;font-weight:800;padding:12px 26px;border-radius:30px;background:#e03131;color:#fff;border:0;box-shadow:0 2px 12px #000a}
+#lights{display:none;position:absolute;inset:0;z-index:3000;align-items:center;justify-content:center;background:rgba(0,0,0,.5)}
+.gantry{background:#111;padding:14px 20px;border-radius:18px;border:3px solid #333}
+.row3{display:flex;gap:14px;margin:10px 0}
+.row3 i{width:54px;height:54px;border-radius:50%;background:#2a0a0a;box-shadow:inset 0 0 8px #000}
+.row3 i.on{background:#ff2a2a;box-shadow:0 0 24px #ff2a2a}
+.row3.g i{background:#06240a}.row3.g i.on{background:#2cff55;box-shadow:0 0 24px #2cff55}
 .set small{opacity:.7}
 .wp{width:26px;height:26px;border-radius:50%;background:var(--acc);color:#fff;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 0 4px #000}
 .un{font-size:22px;filter:drop-shadow(0 0 3px #000)}
@@ -53,7 +60,7 @@ body.ed .leaflet-bottom{bottom:240px!important}
 .strip svg{flex:none}
 .pin{width:30px;height:30px;border-radius:50% 50% 50% 0;background:#d62828;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 0 4px #000}
 .pin span{transform:rotate(45deg);width:20px;height:20px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-size:12px}
-.car{width:0;height:0;border-left:11px solid transparent;border-right:11px solid transparent;border-bottom:28px solid #e8590c;filter:drop-shadow(0 0 3px #000);transition:transform .3s}
+.car{display:block;transform-origin:50% 55%;will-change:transform}
 .dst{font-size:28px;filter:drop-shadow(0 0 3px #000)}
 </style>
 </head>
@@ -75,14 +82,24 @@ body.ed .leaflet-bottom{bottom:240px!important}
 <div class="card set" id="st"><b>Настройки штурмана</b>
   <div class="row" style="margin-top:8px;align-items:center"><span style="flex:1">Порог «плюс/минус», % уклона</span><input id="gt" type="number" min="1" max="15" step="1" style="flex:0 0 70px"></div>
   <small>«плюс» — подъём, «минус» — спуск; при двойном пороге — «сильный»</small>
-  <div class="row" style="margin-top:8px;align-items:center"><span style="flex:1">Вызов пасснот: <b id="offv">0</b> с</span><input id="off" type="range" min="-5" max="8" step="1" style="flex:1.3"></div>
-  <small>Больше — штурман читает раньше, меньше — позже</small>
+  <div class="row" style="margin-top:8px;align-items:center"><span style="flex:1">Читать за: <b id="lsv">5</b> с до поворота</span><input id="leads" type="range" min="2" max="12" step="1" style="flex:1.3"></div>
+  <div class="row" style="margin-top:8px;align-items:center"><span style="flex:1">Но не ближе, чем: <b id="lmv">90</b> м</span><input id="leadm" type="range" min="30" max="400" step="10" style="flex:1.3"></div>
+  <small>Чем быстрее едете, тем раньше читает. «Не ближе» — минимум в метрах.</small>
+  <div class="row" style="margin-top:8px;align-items:center"><span style="flex:1">Скорость голоса: <b id="rv">0.90</b></span><input id="rate" type="range" min="0.6" max="1.3" step="0.05" style="flex:1.3"></div>
+  <div class="row" style="margin-top:8px;align-items:center"><span style="flex:1">Стиль голоса</span><select id="preset" style="flex:1.4"><option value="">— выбрать —</option><option value="rally">Диктор ралли (низкий, чёткий)</option><option value="calm">Спокойный</option><option value="fast">Бодрый</option></select></div>
+  <div class="row" style="margin-top:8px;align-items:center"><span style="flex:1">Тон голоса: <b id="pv">0.95</b></span><input id="pitch" type="range" min="0.6" max="1.4" step="0.05" style="flex:1.3"></div>
+  <div class="row" style="margin-top:8px;align-items:center"><span style="flex:1">Громкость: <b id="vv">1.0</b></span><input id="vol" type="range" min="0.3" max="1" step="0.1" style="flex:1.3"></div>
+  <div class="row" style="margin-top:8px;align-items:center"><span style="flex:1">Читать наперёд</span><select id="ahead" style="flex:1.4"><option value="0">Только текущий поворот</option><option value="1">+ дистанция до следующего</option><option value="2">2 записи подряд</option><option value="3">3 записи подряд</option></select></div>
+  <div class="row" style="margin-top:8px;align-items:center"><span style="flex:1">Голос</span><select id="vsel" style="flex:1.6"></select></div>
+  <small>Самый живой голос — с пометкой ★ (Enhanced/Premium). iPhone: Настройки → Универсальный доступ → Устный контент → Голоса → Русский → Milena или Yuri (Enhanced). Android: Google Text-to-Speech → голоса.</small>
   <div class="row" style="margin-top:8px;align-items:center"><span style="flex:1">Язык штурмана</span><select id="lang" style="flex:1.2"><option value="ru">Русский</option><option value="en">English (WRC-style)</option></select></div>
   <small>English: «Left 3 into Right 4 long, 100, Hairpin left don't cut»</small>
   <div class="row" style="margin-top:8px"><button id="vtest">▶ Проверить голос</button><button id="vlist">📖 Словарь</button></div>
   <div id="vocab" style="display:none;max-height:36vh;overflow:auto;font-size:12px;margin-top:6px"></div>
   <button class="go" id="stok" style="margin-top:8px;width:100%">Готово</button>
 </div>
+<button id="gs">🚦 СТАРТ</button>
+<div id="lights"><div class="gantry"><div class="row3"><i></i><i></i><i></i></div><div class="row3 g"><i></i><i></i><i></i></div></div></div>
 <div class="card bottom">
   <div class="hud">
     <div class="big"><span id="spd">0</span> <small>км/ч</small></div>
@@ -104,7 +121,7 @@ body.ed .leaflet-bottom{bottom:240px!important}
 <script>
 const $=x=>document.getElementById(x);
 // ===== Карта: спутник Esri + подписи, либо схема OSM =====
-const map=L.map('map',{zoomControl:false,maxZoom:19}).setView([43.238,76.945],12);
+const map=L.map('map',{zoomControl:false,maxZoom:19,preferCanvas:true}).setView([43.238,76.945],12);
 L.control.zoom({position:'bottomright'}).addTo(map);
 const sat=L.layerGroup([
   L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,maxNativeZoom:18,attribution:'Esri, Maxar, Earthstar'}),
@@ -128,15 +145,33 @@ const brg=(a,b)=>{const r=Math.PI/180,y=Math.sin((b[1]-a[1])*r)*Math.cos(b[0]*r)
 
 // ===== Голос =====
 let EN=false;try{EN=localStorage.getItem('rr_lang')==='en'}catch(e){}
+let RATE=.9,AHEAD=0,PITCH=.95,VOL=1,LEADS=5,LEADM=90,VSEL={ru:'',en:''};
+try{const g=(k,d)=>{const v=parseFloat(localStorage.getItem(k));return isNaN(v)?d:v};RATE=g('rr_rate',.9);AHEAD=g('rr_ahead',0);PITCH=g('rr_pitch',.95);VOL=g('rr_vol',1);LEADS=g('rr_leads',5);LEADM=g('rr_leadm',90);Object.assign(VSEL,JSON.parse(localStorage.getItem('rr_vsel')||'{}'))}catch(e){}
 const VO={ru:null,en:null};
-const pv=()=>{const v=speechSynthesis.getVoices();VO.ru=v.find(x=>/^ru/i.test(x.lang))||null;
-  VO.en=v.find(x=>/en[-_]GB/i.test(x.lang)&&/daniel|male|arthur|oliver|george/i.test(x.name))||v.find(x=>/en[-_]GB/i.test(x.lang))||v.find(x=>/^en/i.test(x.lang))||null};
+const listVoices=lang=>speechSynthesis.getVoices().filter(v=>(lang==='en'?/^en/i:/^ru/i).test(v.lang));
+const HQ=/enhanced|premium|natural|neural|siri/i,GOOD=/milena|yuri|katya|pavel|dmitry|svetlana|irina|google|daniel|oliver|arthur|serena|kate/i;
+function bestVoice(lang){const vs=listVoices(lang);if(!vs.length)return null;
+  const saved=vs.find(v=>v.name===VSEL[lang]);if(saved)return saved;
+  const sc=v=>(HQ.test(v.name)?4:0)+(GOOD.test(v.name)?2:0)+(v.localService?0:1)+(lang==='en'&&/en[-_]GB/i.test(v.lang)?1:0);
+  return vs.slice().sort((a,b)=>sc(b)-sc(a))[0]}
+const pv=()=>{VO.ru=bestVoice('ru');VO.en=bestVoice('en');fillVoices()};
 if('speechSynthesis' in window){pv();speechSynthesis.onvoiceschanged=pv}
-function say(t,urgent){if(!voiceOn||!('speechSynthesis' in window))return;try{if(urgent)speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);
-  u.lang=EN?'en-GB':'ru-RU';const vv=EN?VO.en:VO.ru;if(vv)u.voice=vv;u.rate=EN?1.05:1.15;u.pitch=EN?.8:.9;speechSynthesis.speak(u)}catch(e){}}
+function fillVoices(){const sel=$('vsel');if(!sel||!('speechSynthesis' in window))return;const vs=listVoices(EN?'en':'ru'),cur=EN?VO.en:VO.ru;
+  sel.innerHTML=vs.length?vs.map(v=>'<option value="'+v.name.replace(/"/g,'&quot;')+'"'+(cur&&v.name===cur.name?' selected':'')+'>'+v.name+(HQ.test(v.name)?' ★':'')+'</option>').join(''):'<option>голосов нет</option>'}
+function say(t,urgent){if(!voiceOn||!('speechSynthesis' in window))return;try{
+  if(urgent||speechSynthesis.pending)speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(t);u.lang=EN?'en-GB':'ru-RU';const vv=EN?VO.en:VO.ru;if(vv){u.voice=vv;u.lang=vv.lang}
+  u.rate=RATE;u.pitch=PITCH;u.volume=VOL;speechSynthesis.speak(u)}catch(e){}}
+// числа словами — речь звучит естественнее
+const R1=['','один','два','три','четыре','пять','шесть','семь','восемь','девять','десять','одиннадцать','двенадцать','тринадцать','четырнадцать','пятнадцать','шестнадцать','семнадцать','восемнадцать','девятнадцать'],R10=['','','двадцать','тридцать','сорок','пятьдесят','шестьдесят','семьдесят','восемьдесят','девяносто'],R100=['','сто','двести','триста','четыреста','пятьсот','шестьсот','семьсот','восемьсот','девятьсот'];
+function ruWords(n){n=Math.round(n);if(n<=0)return'ноль';if(n>=10000)return String(n);const p=[],th=Math.floor(n/1000);
+  if(th){p.push(th===1?'тысяча':th===2?'две тысячи':th<5?R1[th]+' тысячи':R1[th]+' тысяч');n%=1000}
+  if(n>=100){p.push(R100[Math.floor(n/100)]);n%=100}
+  if(n>=20){p.push(R10[Math.floor(n/10)]);n%=10}
+  if(n>0)p.push(R1[n]);return p.join(' ')}
 const sy=(r,e,u)=>say(EN?e:r,u);
 $('voice').onclick=()=>{voiceOn=!voiceOn;$('voice').textContent=voiceOn?'🔊':'🔇';if(voiceOn)sy('Штурман на связи','Co-driver ready');else try{speechSynthesis.cancel()}catch(e){}};
-const rnd=m=>EN?(m>=1000?(m/1000).toFixed(1)+' kilometers':Math.round(m/50)*50+' meters'):m>=1000?(m/1000).toFixed(1).replace('.',',')+' километра':Math.round(m/50)*50+' метров';
+const rnd=m=>EN?(m>=1000?(m/1000).toFixed(1)+' kilometers':Math.round(m/50)*50+' meters'):m>=1000?(m/1000).toFixed(1).replace('.',',')+' километра':ruWords(Math.round(m/50)*50)+' метров';
 const DIR={left:'налево','slight left':'плавно налево','sharp left':'резко налево',right:'направо','slight right':'плавно направо','sharp right':'резко направо',straight:'прямо',uturn:'разворот'};
 function finishSay(){const k=(trip/1000).toFixed(1);sy('Финиш! Пройдено '+k.replace('.',',')+' километра. Максимум '+Math.round(maxSp)+' километров в час','Finish! Distance '+k+' kilometers. Top speed '+Math.round(maxSp)+' kilometers per hour',true)}
 function phraseEN(st){const m=st.maneuver,t=m.type,mod=m.modifier||'',n=st.name?' onto '+st.name:'';
@@ -156,21 +191,28 @@ function phrase(st){if(EN)return phraseEN(st);const m=st.maneuver,t=m.type,mod=m
 const arrow=st=>{const m=st.maneuver;if(m.type==='arrive')return'🏁';if(m.type==='via')return'📍';const d=m.modifier||'';return d==='uturn'?'⮌':d.includes('left')?'⬅':d.includes('right')?'⮕':'⬆'};
 
 // ===== Позиция, скорость, слежение =====
-const carIcon=L.divIcon({className:'',html:'<div class="car"></div>',iconSize:[22,28],iconAnchor:[11,14]});
+const carIcon=L.divIcon({className:'',html:'<svg class="car" width="26" height="30" viewBox="0 0 26 30"><path d="M13 1L25 28L13 22L1 28Z" fill="#e8590c" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg>',iconSize:[26,30],iconAnchor:[13,15]});
 const meMarker=L.marker([43.238,76.945],{icon:carIcon,zIndexOffset:1000}),acc=L.circle([0,0],{radius:0,weight:1,color:'#1971c2',fillOpacity:.1});
+let disp=null,seg=null,hdgT=0,hdgD=0,lastPan=0;
+// плавное движение: машина и карта двигаются каждый кадр, а не рывками раз в секунду
+(function frame(now){
+  if(disp&&map.hasLayer(meMarker)){
+    if(seg){const k=Math.min(1,(now-seg.t0)/seg.dur);disp=[seg.from[0]+(seg.to[0]-seg.from[0])*k,seg.from[1]+(seg.to[1]-seg.from[1])*k];meMarker.setLatLng(disp);if(k>=1)seg=null}
+    hdgD+=(((hdgT-hdgD+540)%360)-180)*.15;const el=meMarker.getElement();if(el&&el.firstChild)el.firstChild.style.transform='rotate('+hdgD.toFixed(1)+'deg)';
+    if(follow&&now-lastPan>60){lastPan=now;const o=map.latLngToContainerPoint(disp).subtract(map.getSize().divideBy(2));if(Math.abs(o.x)>.5||Math.abs(o.y)>.5)map.panBy(o,{animate:false})}}
+  requestAnimationFrame(frame)})(performance.now());
 function onPos(lat,lon,s,h,a,ts){
+  if(last&&(a||0)>80)return;
   const p=[lat,lon];
   if(last){const d=hv(last.p,p),dt=(ts-last.t)/1000;
     if(s==null||isNaN(s))s=dt>0?d/dt:0;
     if(d>Math.max(3,(a||0)*.3)&&s>1){trip+=d;if(h==null||isNaN(h))h=brg(last.p,p)}
     if(d<3&&s<1)p[0]=last.p[0],p[1]=last.p[1];}
-  if(h!=null&&!isNaN(h))hdg=h;
-  spd=Math.max(0,s||0);if(spd*3.6<300)maxSp=Math.max(maxSp,spd*3.6);
-  last={p:[lat,lon],t:ts};me=[lat,lon];
-  if(!map.hasLayer(meMarker)){meMarker.addTo(map);acc.addTo(map)}
-  meMarker.setLatLng(me);acc.setLatLng(me).setRadius(a||0);
-  const el=meMarker.getElement();if(el)el.firstChild.style.transform='rotate('+hdg+'deg)';
-  if(follow)map.panTo(me,{animate:true,duration:.5});
+  if(h!=null&&!isNaN(h)&&(s||0)>1.5)hdg=h;
+  spd=last?spd*.5+Math.max(0,s||0)*.5:Math.max(0,s||0);if(spd*3.6<300)maxSp=Math.max(maxSp,spd*3.6);
+  const fdt=last?Math.min(1500,Math.max(400,ts-last.t)):800;last={p:[lat,lon],t:ts};me=[lat,lon];
+  if(!map.hasLayer(meMarker)){meMarker.addTo(map);acc.addTo(map);disp=me.slice();meMarker.setLatLng(disp);hdgD=hdg}
+  seg={from:disp.slice(),to:me.slice(),t0:performance.now(),dur:fdt};acc.setLatLng(me).setRadius(a||0);hdgT=hdg;
   $('spd').textContent=Math.round(spd*3.6);$('max').textContent=Math.round(maxSp);$('trip').textContent=(trip/1000).toFixed(1)+' км';
   if(!route)$('nsub').textContent='GPS: точность ±'+Math.round(a||0)+' м';
   navUpdate();
@@ -203,13 +245,13 @@ async function build(re){
     route={c:rt.geometry.coordinates.map(x=>[x[1],x[0]]),steps,dist:rt.distance,dur:rt.duration,vias,skip};
     cum=[0];for(let i=1;i<route.c.length;i++)cum.push(cum[i-1]+hv(route.c[i-1],route.c[i]));
     si=1;ri=0;off=0;route.steps.forEach(s=>s.f=0);buildNotes();loadElev(route,cum);
-    if(line)map.removeLayer(line);line=L.polyline(route.c,{color:'#f59f00',weight:7,opacity:.95}).addTo(map);
+    if(line)map.removeLayer(line);line=L.polyline(route.c,{color:'#f59f00',weight:7,opacity:.95,smoothFactor:2}).addTo(map);
     const km=(rt.distance/1000).toFixed(1);
     if(!re&&!editing){setFollow(false);map.fitBounds(line.getBounds(),{paddingTopLeft:[10,170],paddingBottomRight:[10,170]})}
     if(editing)$('nsub').textContent='Маршрут '+km+' км · пасснот '+notes.length;
-    else sy(re?'Маршрут перестроен':(wp.length?'Свой маршрут. ':'Маршрут до '+target.name+'. ')+km.replace('.',',')+' километра. Пасснот '+notes.length+'. '+(me?'Поехали!':'GPS не найден, старт из центра карты'),
-      re?'Route recalculated':(wp.length?'Custom route. ':'Route to '+target.name+'. ')+km+' kilometers. '+notes.length+' pacenotes. '+(me?'Go!':'No GPS, starting from the map center'),true);
-    navUpdate();
+    else sy(re?'Маршрут перестроен':(wp.length?'Свой маршрут. ':'Маршрут до '+target.name+'. ')+km.replace('.',',')+' километра. Пасснот '+notes.length+'. '+(me?'Жмите старт':'GPS не найден, старт из центра карты'),
+      re?'Route recalculated':(wp.length?'Custom route. ':'Route to '+target.name+'. ')+km+' kilometers. '+notes.length+' pacenotes. '+(me?'Press start':'No GPS, starting from the map center'),true);
+    $('gs').style.display=editing?'none':'block';navUpdate();
   }catch(e){$('nsub').textContent='Не удалось построить маршрут (нужен интернет)';if(!editing)sy('Маршрут не построен','Route not found')}
 }
 $('go').onclick=()=>{if(!dest.value)return;const [la,lo]=dest.value.split(',').map(Number);setTarget([la,lo],dest.selectedOptions[0].dataset.n)};
@@ -293,11 +335,11 @@ async function loadElev(r,cm){
   }catch(e){}
 }
 function pack(i){
-  const total=cum[cum.length-1],parts=[tx(notes[i],1)];notes[i].s=true;let j=i;
-  while(j<notes.length-1&&j-i<3){const g=notes[j+1].d-(notes[j].d+notes[j].len);if(g>260)break;
-    parts.push(EN?(g<25?'into':g<50?'and':gapStr(g)):gapStr(g));parts.push(tx(notes[j+1],1));notes[j+1].s=true;j++}
-  const nx=notes[j+1],g=(nx?nx.d:total)-(notes[j].d+notes[j].len);
-  if(g>=300)parts.push(EN?'straight '+(nx?gapStr(g):'to the finish'):'прямо '+(nx?gapStr(g):'до финиша'));
+  const total=cum[cum.length-1],W=g=>EN?gapStr(g):ruWords(gapStr(g)),parts=[tx(notes[i],1)];notes[i].s=true;let j=i;
+  while(AHEAD>=2&&j<notes.length-1&&j-i<AHEAD-1){const g=notes[j+1].d-(notes[j].d+notes[j].len);if(g>120)break;
+    parts.push(EN?(g<25?'into':g<50?'and':W(g)):W(g));parts.push(tx(notes[j+1],1));notes[j+1].s=true;j++}
+  if(AHEAD>=1){const nx=notes[j+1],g=(nx?nx.d:total)-(notes[j].d+notes[j].len);
+    if(g>=150)parts.push(EN?'straight '+(nx?W(g):'to the finish'):'прямо '+(nx?W(g):'до финиша'))}
   return EN?parts.join(', ').replace(/, (into|and), /g,' $1 '):parts.join(', ');
 }
 const COL={1:'#e03131',2:'#f08c00',3:'#f5c518',4:'#94d82d',5:'#40c057',6:'#2fbf2f'};
@@ -319,8 +361,8 @@ function stripHTML(di,pos){let h='',prev=pos;
   for(let k=di,c=0;k<notes.length&&c<4;k++,c++){const n=notes[k],g=Math.round((n.d-prev)/10)*10;h+=(g>=20?'<span class="chip">'+g+'</span>':'')+icon(n,36);prev=n.d+n.len}
   return h}
 function rally(rem){
-  const pos=cum[ri],lead=Math.max(60,150+OFF*15,spd*(8+OFF));
-  if(!said0){said0=true;const f=notes[0];if(!f||f.d>=300)say(EN?'Straight '+(f?gapStr(f.d):'to the finish'):'Прямо '+(f?gapStr(f.d):'до финиша'))}
+  const pos=cum[ri],lead=Math.max(LEADM,spd*LEADS/Math.min(1,RATE));
+  if(!said0){said0=true;const f=notes[0];if(AHEAD>=1&&(!f||f.d>=300))say(EN?'Straight '+(f?gapStr(f.d):'to the finish'):'Прямо '+(f?ruWords(gapStr(f.d)):'до финиша'))}
   const di=notes.findIndex(n=>n.d+n.len>=pos-5);
   if(di<0){$('arr').innerHTML=STRAIGHT;$('hd').textContent=fmtD(rem);$('ntxt').textContent=EN?'Straight to the finish':'Прямо до финиша';$('nsub').textContent='';$('nx').style.display='none'}
   else{const n=notes[di],d=n.d-pos;
@@ -385,7 +427,7 @@ function addNote(p,t,silent){
   m.on('click',()=>{if(!editing)return;map.removeLayer(m);userNotes.splice(userNotes.indexOf(u),1);sched()});
   userNotes.push(u);if(!silent)sched()}
 function clearCustom(){wp.forEach(w=>map.removeLayer(w.m));userNotes.forEach(u=>map.removeLayer(u.m));wp=[];userNotes=[]}
-function wipeAll(){clearCustom();route=null;target=null;notes=[];if(line)map.removeLayer(line);if(tMarker)map.removeLayer(tMarker);line=tMarker=null;
+function wipeAll(){$('gs').style.display='none';clearCustom();route=null;target=null;notes=[];if(line)map.removeLayer(line);if(tMarker)map.removeLayer(tMarker);line=tMarker=null;
   trip=0;maxSp=0;$('rem').textContent=$('eta').textContent='—';$('ntxt').textContent='Маршрут сброшен';$('arr').textContent='▲';stopSim()}
 $('edit').onclick=()=>{editing=!editing;$('edit').className=editing?'on':'';$('ed').classList.toggle('show',editing);document.body.classList.toggle('ed',editing);
   wp.forEach(w=>editing?w.m.dragging.enable():w.m.dragging.disable());
@@ -408,11 +450,10 @@ $('gpx').onclick=()=>{if(!route)return;const x=['<?xml version="1.0" encoding="U
   userNotes.forEach(u=>x.push('<wpt lat="'+u.p[0]+'" lon="'+u.p[1]+'"><name>'+u.t+'</name></wpt>'));
   x.push('<trk><name>Ралли маршрут</name><trkseg>'+route.c.map(p=>'<trkpt lat="'+p[0]+'" lon="'+p[1]+'"/>').join('')+'</trkseg></trk></gpx>');
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([x.join('')],{type:'application/gpx+xml'}));a.download='rally-route.gpx';a.click()};
-$('cog').onclick=()=>{$('gt').value=GT;$('off').value=OFF;$('offv').textContent=OFF;$('st').classList.add('show')};
+$('cog').onclick=()=>{syncSet();$('st').classList.add('show')};
 $('gt').onchange=()=>{GT=Math.max(1,+$('gt').value||5);saveSet()};
-$('off').oninput=()=>{OFF=+$('off').value;$('offv').textContent=OFF;saveSet()};
 $('lang').value=EN?'en':'ru';
-$('lang').onchange=()=>{EN=$('lang').value==='en';try{localStorage.setItem('rr_lang',EN?'en':'ru')}catch(e){}sy('Штурман говорит по-русски','Co-driver in English',true)};
+$('lang').onchange=()=>{EN=$('lang').value==='en';try{localStorage.setItem('rr_lang',EN?'en':'ru')}catch(e){}fillVoices();sy('Штурман говорит по-русски','Co-driver in English',true)};
 $('vtest').onclick=()=>say(EN?"3 right long, 100, 4 left into Square right, 150, Hairpin left don't cut, 50, Pothole, straight 300, Finish":'три право затяжной, 100, четыре лево, 150, шпилька, 50, яма, прямо 300',true);
 $('vlist').onclick=()=>{const v=$('vocab');v.style.display=v.style.display==='none'?'block':'none';
   v.innerHTML=['<b>Поворот:</b> «3 Right», «4 Left» — номер, затем сторона. 6 — почти прямо, 1 — самый крутой','<b>Самые крутые:</b> Square (прямой угол), Hairpin (шпилька)','<b>Long:</b> «3 Right · Long» — долгий поворот, держать дольше','<b>Числа отдельно:</b> «300» — метров прямой до следующей записи; into — записи подряд','<b>Дополнения:</b> tightens, opens, don\'t cut, narrow, uphill / downhill, steep','<b>Препятствия (ваши пометки):</b> Speed camera, Pothole, Water on the road, Crest, Narrow bridge, Roadworks, Danger; также Jump, Rocks','<b>Система:</b> Checkpoint 1, Brake!, Finish, Go!, Off route'].map(x=>'<div style="margin:3px 0">'+x+'</div>').join('')};
@@ -420,6 +461,33 @@ $('burger').onclick=()=>$('menu').classList.toggle('show');
 const closeMenu=()=>$('menu').classList.remove('show');
 ['go','find','pick','edit','cog'].forEach(id=>$(id).addEventListener('click',closeMenu));
 map.on('click',closeMenu);
+$('vsel').onchange=()=>{VSEL[EN?'en':'ru']=$('vsel').value;try{localStorage.setItem('rr_vsel',JSON.stringify(VSEL))}catch(e){}pv();sy('Привет, я твой штурман. Три право затяжной, сто, шпилька лево','Hello, I am your co-driver. 3 right long, 100, hairpin left',true)};
+$('rate').oninput=()=>{RATE=+$('rate').value;$('rv').textContent=RATE.toFixed(2);try{localStorage.setItem('rr_rate',RATE)}catch(e){}};
+$('rate').onchange=()=>sy('Проверка скорости голоса: три право, сто, шпилька лево','Voice speed test: 3 right, 100, hairpin left',true);
+$('ahead').onchange=()=>{AHEAD=+$('ahead').value;try{localStorage.setItem('rr_ahead',AHEAD)}catch(e){}};
+function syncSet(){$('rate').value=RATE;$('rv').textContent=RATE.toFixed(2);$('pitch').value=PITCH;$('pv').textContent=PITCH.toFixed(2);$('vol').value=VOL;$('vv').textContent=VOL.toFixed(1);
+  $('leads').value=LEADS;$('lsv').textContent=LEADS;$('leadm').value=LEADM;$('lmv').textContent=LEADM;$('ahead').value=AHEAD;$('gt').value=GT;fillVoices()}
+const saveCfg=()=>{try{const o={rr_rate:RATE,rr_ahead:AHEAD,rr_pitch:PITCH,rr_vol:VOL,rr_leads:LEADS,rr_leadm:LEADM};for(const k in o)localStorage.setItem(k,o[k]);localStorage.setItem('rr_vsel',JSON.stringify(VSEL))}catch(e){}};
+$('pitch').oninput=()=>{PITCH=+$('pitch').value;$('pv').textContent=PITCH.toFixed(2);saveCfg()};
+$('vol').oninput=()=>{VOL=+$('vol').value;$('vv').textContent=VOL.toFixed(1);saveCfg()};
+$('leads').oninput=()=>{LEADS=+$('leads').value;$('lsv').textContent=LEADS;saveCfg()};
+$('leadm').oninput=()=>{LEADM=+$('leadm').value;$('lmv').textContent=LEADM;saveCfg()};
+['pitch','vol'].forEach(id=>$(id).onchange=()=>sy('Проверка голоса: три право, сто, шпилька лево','Voice check: 3 right, 100, hairpin left',true));
+const PRE={rally:{r:.95,p:.8,v:1,m:/yuri|pavel|dmitry|maxim|aleksandr|artem|male/i},calm:{r:.85,p:1,v:1},fast:{r:1.05,p:.95,v:1}};
+$('preset').onchange=()=>{const p=PRE[$('preset').value];if(!p)return;RATE=p.r;PITCH=p.p;VOL=p.v;
+  if(p.m&&!EN){const v=listVoices('ru').find(x=>p.m.test(x.name));if(v)VSEL.ru=v.name}
+  saveCfg();pv();syncSet();sy('Готов. Три право затяжной, сто, шпилька лево','Ready. 3 right long, 100, hairpin left',true)};
+// ===== светофор на старте: три красных, затем три зелёных =====
+let AC=null;
+function beep(fr,d){try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();const o=AC.createOscillator(),g=AC.createGain();o.type='square';o.frequency.value=fr;g.gain.value=.15*VOL;o.connect(g);g.connect(AC.destination);o.start();o.stop(AC.currentTime+d)}catch(e){}}
+function startLights(){
+  const L=$('lights'),red=[...L.querySelectorAll('.row3:not(.g) i')],grn=[...L.querySelectorAll('.row3.g i')];
+  $('gs').style.display='none';L.style.display='flex';[...red,...grn].forEach(x=>x.classList.remove('on'));
+  const w=EN?['three','two','one']:['три','два','один'];
+  red.forEach((x,i)=>setTimeout(()=>{x.classList.add('on');beep(660,.2);say(w[i],true)},i*1000));
+  setTimeout(()=>{red.forEach(x=>x.classList.remove('on'));grn.forEach(x=>x.classList.add('on'));beep(1100,.8);say(EN?'Go!':'Старт!',true);trip=0;maxSp=0;if(me)setFollow(true)},3000);
+  setTimeout(()=>{L.style.display='none'},4800)}
+$('gs').onclick=startLights;
 $('stok').onclick=()=>$('st').classList.remove('show');
 </script>
 </body>
